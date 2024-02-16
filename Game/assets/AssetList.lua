@@ -10,7 +10,6 @@ local function LoadSongs()
     -- love.audio.newSource(..., 'stream')
 
     assets.music.testbg = love.audio.newSource('assets/music/song18.mp3', 'stream')
-    assets.music.testsong2 = love.audio.newSource('assets/music/songterr.mp3', 'stream')
 
     print("Successfully loaded all Songs")
 end
@@ -33,8 +32,7 @@ local function LoadImages()
 
     -- love.graphics.newImage(...)
 
-    assets.images.player_standing = love.graphics.newImage('assets/images/standing.png')
-    assets.images.grass_tile = love.graphics.newImage('assets/images/grass.png')
+    -- assets.images.grass_tile = love.graphics.newImage('assets/images/grass.png')
 
     print("Successfully loaded all Images")
 end

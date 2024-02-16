@@ -127,10 +127,6 @@ function MainScene:keypressed(key)
         love.event.push('quit')
     elseif key == '1' then
         love.audio.stopAll()
-        love.audio.play(assets.music.testsong2)
-        CurrentSong = "testsong2"
-    elseif key == '2' then
-        love.audio.stopAll()
         love.audio.play(assets.music.testbg)
         CurrentSong = "testbg"
     elseif key == 'm' then
