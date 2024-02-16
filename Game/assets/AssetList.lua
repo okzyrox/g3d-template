@@ -42,6 +42,7 @@ function LoadTextures()
     assets.textures.blank = "assets/textures/blank.png"
     assets.textures.maptiles = "assets/textures/tileset.png"
     assets.textures.background = "assets/textures/starfield.png"
+    assets.textures.voxeltextures = love.graphics.newImage("assets/textures/texturepack.png")
 
 
 end

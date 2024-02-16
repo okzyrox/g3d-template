@@ -1,5 +1,5 @@
 -- written by groverbuger for g3d
--- january 2021
+-- september 2021
 -- MIT license
 
 local vectors = require(g3d.path .. "/vectors")
@@ -129,7 +129,7 @@ local function triangleSphere(
     and vectorDotProduct(c1_x, c1_y, c1_z, n_x, n_y, n_z) <= 0
     and vectorDotProduct(c2_x, c2_y, c2_z, n_x, n_y, n_z) <= 0 then
         n_x, n_y, n_z = src_x - itx_x, src_y - itx_y, src_z - itx_z
-        
+
         -- the sphere is inside the triangle, so the normal is zero
         -- instead, just return the triangle's normal
         if n_x == 0 and n_y == 0 and n_z == 0 then
@@ -317,33 +317,10 @@ local function triangleCapsule(
     )
 end
 
--- finds whether or not a triangle is inside an AABB
-local function triangleAABB(
-        tri_0_x, tri_0_y, tri_0_z,
-        tri_1_x, tri_1_y, tri_1_z,
-        tri_2_x, tri_2_y, tri_2_z,
-        n_x, n_y, n_z,
-        min_x, min_y, min_z,
-        max_x, max_y, max_z
-    )
-
-    -- get the closest point from the centerpoint on the triangle
-    local len,x,y,z,nx,ny,nz = trianglePoint(
-        tri_0_x, tri_0_y, tri_0_z,
-        tri_1_x, tri_1_y, tri_1_z,
-        tri_2_x, tri_2_y, tri_2_z,
-        n_x, n_y, n_z,
-        (min_x+max_x)*0.5, (min_y+max_y)*0.5, (min_z+max_z)*0.5
-    )
-
-    -- if the point is not inside the AABB, return nothing
-    if not (x >= min_x and x <= max_x) then return end
-    if not (y >= min_y and y <= max_y) then return end
-    if not (z >= min_z and z <= max_z) then return end
-
-    -- the point is inside the AABB, return the collision data
-    return len, x,y,z, nx,ny,nz
-end
+----------------------------------------------------------------------------------------------------
+-- function appliers
+----------------------------------------------------------------------------------------------------
+-- these functions apply the collision test functions on the given list of triangles
 
 -- runs a given intersection function on all of the triangles made up of a given vert table
 local function findClosest(self, verts, func, ...)
@@ -351,12 +328,19 @@ local function findClosest(self, verts, func, ...)
     local finalLength, where_x, where_y, where_z, norm_x, norm_y, norm_z
 
     -- cache references to this model's properties for efficiency
-    local translation_x = self.translation[1]
-    local translation_y = self.translation[2]
-    local translation_z = self.translation[3]
-    local scale_x = self.scale[1]
-    local scale_y = self.scale[2]
-    local scale_z = self.scale[3]
+    local translation_x, translation_y, translation_z, scale_x, scale_y, scale_z = 0, 0, 0, 1, 1, 1
+    if self then
+        if self.translation then
+            translation_x = self.translation[1]
+            translation_y = self.translation[2]
+            translation_z = self.translation[3]
+        end
+        if self.scale then
+            scale_x = self.scale[1]
+            scale_y = self.scale[2]
+            scale_z = self.scale[3]
+        end
+    end
 
     for v=1, #verts, 3 do
         -- apply the function given with the arguments given
@@ -406,19 +390,78 @@ local function findClosest(self, verts, func, ...)
     return finalLength, where_x, where_y, where_z, norm_x, norm_y, norm_z
 end
 
-function collisions:rayIntersection(src_x, src_y, src_z, dir_x, dir_y, dir_z)
-    return findClosest(self, self.verts, triangleRay, src_x, src_y, src_z, dir_x, dir_y, dir_z)
+-- runs a given intersection function on all of the triangles made up of a given vert table
+local function findAny(self, verts, func, ...)
+    -- cache references to this model's properties for efficiency
+    local translation_x, translation_y, translation_z, scale_x, scale_y, scale_z = 0, 0, 0, 1, 1, 1
+    if self then
+        if self.translation then
+            translation_x = self.translation[1]
+            translation_y = self.translation[2]
+            translation_z = self.translation[3]
+        end
+        if self.scale then
+            scale_x = self.scale[1]
+            scale_y = self.scale[2]
+            scale_z = self.scale[3]
+        end
+    end
+
+    for v=1, #verts, 3 do
+        -- apply the function given with the arguments given
+        -- also supply the points of the current triangle
+        local n_x, n_y, n_z = vectorNormalize(
+            verts[v][6]*scale_x,
+            verts[v][7]*scale_x,
+            verts[v][8]*scale_x
+        )
+
+        local length = func(
+            verts[v][1]*scale_x + translation_x,
+            verts[v][2]*scale_y + translation_y,
+            verts[v][3]*scale_z + translation_z,
+            verts[v+1][1]*scale_x + translation_x,
+            verts[v+1][2]*scale_y + translation_y,
+            verts[v+1][3]*scale_z + translation_z,
+            verts[v+2][1]*scale_x + translation_x,
+            verts[v+2][2]*scale_y + translation_y,
+            verts[v+2][3]*scale_z + translation_z,
+            n_x,
+            n_y,
+            n_z,
+            ...
+        )
+
+        -- if something was hit
+        -- and either the finalLength is not yet defined or the new length is closer
+        -- then update the collision information
+        if length then return true end
+    end
+
+    return false
 end
 
-function collisions:sphereIntersection(src_x, src_y, src_z, radius)
-    return findClosest(self, self.verts, triangleSphere, src_x, src_y, src_z, radius)
+----------------------------------------------------------------------------------------------------
+-- collision functions that apply on lists of vertices
+----------------------------------------------------------------------------------------------------
+
+function collisions.rayIntersection(verts, transform, src_x, src_y, src_z, dir_x, dir_y, dir_z)
+    return findClosest(transform, verts, triangleRay, src_x, src_y, src_z, dir_x, dir_y, dir_z)
 end
 
-function collisions:closestPoint(src_x, src_y, src_z)
-    return findClosest(self, self.verts, trianglePoint, src_x, src_y, src_z)
+function collisions.isPointInside(verts, transform, x, y, z)
+    return findAny(transform, verts, triangleRay, x, y, z, 0, 0, 1)
 end
 
-function collisions:capsuleIntersection(tip_x, tip_y, tip_z, base_x, base_y, base_z, radius)
+function collisions.sphereIntersection(verts, transform, src_x, src_y, src_z, radius)
+    return findClosest(transform, verts, triangleSphere, src_x, src_y, src_z, radius)
+end
+
+function collisions.closestPoint(verts, transform, src_x, src_y, src_z)
+    return findClosest(transform, verts, trianglePoint, src_x, src_y, src_z)
+end
+
+function collisions.capsuleIntersection(verts, transform, tip_x, tip_y, tip_z, base_x, base_y, base_z, radius)
     -- the normal vector coming out the tip of the capsule
     local norm_x, norm_y, norm_z = vectorNormalize(tip_x - base_x, tip_y - base_y, tip_z - base_z)
 
@@ -428,8 +471,8 @@ function collisions:capsuleIntersection(tip_x, tip_y, tip_z, base_x, base_y, bas
     local b_x, b_y, b_z = tip_x - norm_x*radius, tip_y - norm_y*radius, tip_z - norm_z*radius
 
     return findClosest(
-        self,
-        self.verts,
+        transform,
+        verts,
         triangleCapsule,
         tip_x, tip_y, tip_z,
         base_x, base_y, base_z,
@@ -438,192 +481,6 @@ function collisions:capsuleIntersection(tip_x, tip_y, tip_z, base_x, base_y, bas
         norm_x, norm_y, norm_z,
         radius
     )
-end
-
-function collisions:createCollisionZones(zoneSize)
-    local aabb = self:generateAABB()
-
-    local min_1 = math.floor(aabb.min[1]/zoneSize)*zoneSize
-    local min_2 = math.floor(aabb.min[2]/zoneSize)*zoneSize
-    local min_3 = math.floor(aabb.min[3]/zoneSize)*zoneSize
-
-    local max_1 = math.floor(aabb.max[1]/zoneSize)*zoneSize
-    local max_2 = math.floor(aabb.max[2]/zoneSize)*zoneSize
-    local max_3 = math.floor(aabb.max[3]/zoneSize)*zoneSize
-
-    local translation_x = self.translation[1]
-    local translation_y = self.translation[2]
-    local translation_z = self.translation[3]
-    local scale_x = self.scale[1]
-    local scale_y = self.scale[2]
-    local scale_z = self.scale[3]
-    local verts = self.verts
-
-    local zones = {}
-    for x=min_1, max_1, zoneSize do
-        for y=min_2, max_2, zoneSize do
-            for z=min_3, max_3, zoneSize do
-                local hash = x .. ", " .. y .. ", " .. z
-
-                for v=1, #verts, 3 do
-                    local n_x, n_y, n_z = vectorNormalize(
-                        verts[v][6]*scale_x,
-                        verts[v][7]*scale_x,
-                        verts[v][8]*scale_x
-                    )
-
-                    local inside = triangleAABB(
-                        verts[v][1]*scale_x + translation_x,
-                        verts[v][2]*scale_y + translation_y,
-                        verts[v][3]*scale_z + translation_z,
-                        verts[v+1][1]*scale_x + translation_x,
-                        verts[v+1][2]*scale_y + translation_y,
-                        verts[v+1][3]*scale_z + translation_z,
-                        verts[v+2][1]*scale_x + translation_x,
-                        verts[v+2][2]*scale_y + translation_y,
-                        verts[v+2][3]*scale_z + translation_z,
-                        n_x, n_y, n_z,
-                        x,y,z,
-                        x+zoneSize,y+zoneSize,z+zoneSize
-                    )
-
-                    if inside then
-                        if not zones[hash] then
-                            zones[hash] = {}
-                        end
-
-                        table.insert(zones[hash], verts[v])
-                        table.insert(zones[hash], verts[v+1])
-                        table.insert(zones[hash], verts[v+2])
-                    end
-                end
-                
-                if zones[hash] then
-                    print(hash, #zones[hash])
-                end
-            end
-        end
-    end
-
-    self.zones = zones
-    return zones
-end
-
-----------------------------------------------------------------------------------------------------
--- AABB functions
-----------------------------------------------------------------------------------------------------
--- generate an axis-aligned bounding box
--- very useful for less precise collisions, like hitboxes
---
--- translation, and scale are not included here because they are computed on the fly instead
--- rotation is never included because AABBs are axis-aligned
-function collisions:generateAABB()
-    local aabb = {
-        min = {
-            math.huge,
-            math.huge,
-            math.huge,
-        },
-        max = {
-            -1*math.huge,
-            -1*math.huge,
-            -1*math.huge
-        }
-    }
-
-    for _,vert in ipairs(self.verts) do
-        aabb.min[1] = math.min(aabb.min[1], vert[1])
-        aabb.min[2] = math.min(aabb.min[2], vert[2])
-        aabb.min[3] = math.min(aabb.min[3], vert[3])
-        aabb.max[1] = math.max(aabb.max[1], vert[1])
-        aabb.max[2] = math.max(aabb.max[2], vert[2])
-        aabb.max[3] = math.max(aabb.max[3], vert[3])
-    end
-
-    self.aabb = aabb
-    return aabb
-end
-
--- check if two models have intersecting AABBs
--- other argument is another model
---
--- sources:
---     https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
-function collisions:isIntersectionAABB(other)
-    -- cache these references
-    local a_min = self.aabb.min
-    local a_max = self.aabb.max
-    local b_min = other.aabb.min
-    local b_max = other.aabb.max
-
-    -- make shorter variable names for translation
-    local a_1 = self.translation[1]
-    local a_2 = self.translation[2]
-    local a_3 = self.translation[3]
-    local b_1 = other.translation[1]
-    local b_2 = other.translation[2]
-    local b_3 = other.translation[3]
-
-    -- do the calculation
-    local x = a_min[1]*self.scale[1] + a_1 <= b_max[1]*other.scale[1] + b_1 and a_max[1]*self.scale[1] + a_1 >= b_min[1]*other.scale[1] + b_1
-    local y = a_min[2]*self.scale[2] + a_2 <= b_max[2]*other.scale[2] + b_2 and a_max[2]*self.scale[2] + a_2 >= b_min[2]*other.scale[2] + b_2
-    local z = a_min[3]*self.scale[3] + a_3 <= b_max[3]*other.scale[3] + b_3 and a_max[3]*self.scale[3] + a_3 >= b_min[3]*other.scale[3] + b_3
-    return x and y and z
-end
-
--- check if a given point is inside the model's AABB
-function collisions:isPointInsideAABB(x,y,z)
-    local min = self.aabb.min
-    local max = self.aabb.max
-
-    local in_x = x >= min[1]*self.scale[1] + self.translation[1] and x <= max[1]*self.scale[1] + self.translation[1]
-    local in_y = y >= min[2]*self.scale[2] + self.translation[2] and y <= max[2]*self.scale[2] + self.translation[2]
-    local in_z = z >= min[3]*self.scale[3] + self.translation[3] and z <= max[3]*self.scale[3] + self.translation[3]
-
-    return in_x and in_y and in_z
-end
-
--- returns the distance from the point given to the origin of the model
-function collisions:getDistanceFrom(x,y,z)
-    return math.sqrt((x - self.translation[1])^2 + (y - self.translation[2])^2 + (z - self.translation[3])^2)
-end
-
--- AABB - ray intersection
--- based off of ray - AABB intersection from excessive's CPML library
---
--- sources:
---     https://github.com/excessive/cpml/blob/master/modules/intersect.lua
---     http://gamedev.stackexchange.com/a/18459
-function collisions:rayIntersectionAABB(src_1, src_2, src_3, dir_1, dir_2, dir_3)
-    local dir_1, dir_2, dir_3 = vectorNormalize(dir_1, dir_2, dir_3)
-
-	local t1 = (self.aabb.min[1]*self.scale[1] + self.translation[1] - src_1) / dir_1
-	local t2 = (self.aabb.max[1]*self.scale[1] + self.translation[1] - src_1) / dir_1
-	local t3 = (self.aabb.min[2]*self.scale[2] + self.translation[2] - src_2) / dir_2
-	local t4 = (self.aabb.max[2]*self.scale[2] + self.translation[2] - src_2) / dir_2
-	local t5 = (self.aabb.min[3]*self.scale[3] + self.translation[3] - src_3) / dir_3
-	local t6 = (self.aabb.max[3]*self.scale[3] + self.translation[3] - src_3) / dir_3
-
-    local min = math.min
-    local max = math.max
-	local tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6))
-	local tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6))
-
-	-- ray is intersecting AABB, but whole AABB is behind us
-	if tmax < 0 then
-		return false
-	end
-
-	-- ray does not intersect AABB
-	if tmin > tmax then
-		return false
-	end
-
-    -- return distance and the collision coordinates
-    local where_1 = src_1 + dir_1 * tmin
-    local where_2 = src_2 + dir_2 * tmin
-    local where_3 = src_3 + dir_3 * tmin
-	return tmin, where_1, where_2, where_3
 end
 
 return collisions

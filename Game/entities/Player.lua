@@ -117,6 +117,7 @@ function Player:update()
     if love.keyboard.isDown("space") and self.onGround then
         self.speed[2] = self.speed[2] - jump
     end
+    if love.keyboard.isDown("lshift") then self.position[2] = self.position[2] + 10 end
 
     -- do some trigonometry on the inputs to make movement relative to camera's direction
     -- also to make the player not move faster in diagonal directions

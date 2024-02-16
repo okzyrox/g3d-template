@@ -13,9 +13,6 @@ local Assets = require 'assets.AssetList'
 local SceneManager = require 'scenes.SceneManager'
 local MainMenuScene = require 'scenes.MainMenu'
 local MainScene = require 'scenes.MainScene'
---local LevelEditorScreen = require 'screens.LvlEditor'
-
-
 
 
 debugging = true
