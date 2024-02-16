@@ -2,6 +2,7 @@
 
 -- Overwrite to love.audio to include some better stuff
 require 'assets.SoundMod'
+-- g3d
 require 'library.g3d'
 
 
@@ -9,7 +10,7 @@ local function LoadSongs()
 
     -- love.audio.newSource(..., 'stream')
 
-    assets.music.testbg = love.audio.newSource('assets/music/song18.mp3', 'stream')
+    --assets.music.<name> = love.audio.newSource('assets/music/<filename>', 'stream')
 
     print("Successfully loaded all Songs")
 end
@@ -48,11 +49,6 @@ end
 
 function LoadModels()
 
-    -- assets.models.<name> = g3d.newModel("obj loc", "texture loc", translation, rotation, scale)
-    -- assets.models.<name> = g3d.newModel("obj loc", "texture loc", {0,0,4})
-    --[[or
-
-    ]]
     assets.models.cube = "assets/models/cube.obj"
     assets.models.sphere = "assets/models/sphere.obj"
 

@@ -22,7 +22,6 @@ function ModelManager:update(dt)
 end
 
 function ModelManager:draw()
-    --table.sort(self.tiles, function(a, b) return a.zIndex < b.zIndex end)
 
     for _, model in ipairs(self.models) do
         model:draw()

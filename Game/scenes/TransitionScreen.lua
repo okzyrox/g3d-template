@@ -1,3 +1,12 @@
+--[[
+TransitionScreen
+
+Used to make smooth transitions between scenes when changing
+between them.
+
+]]
+
+
 local TransitionScreen = {}
 
 function TransitionScreen:new(duration, onTransitionComplete, fadeType)

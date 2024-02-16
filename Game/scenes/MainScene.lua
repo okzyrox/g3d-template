@@ -9,7 +9,6 @@ local canvas
 local accumulator = 0
 local frametime = 1/60
 local rollingAverage = {}
-local CurrentSong
 
 local MainScene = {}
 
@@ -25,14 +24,12 @@ function MainScene:enter()
 
     modelManager = ModelManager:new()
 
-    CurrentSong = "testbg"
-
-    newModel = g3d.newModel(
-        assets.models.cube,
-        assets.textures.blank,
-        {5, -5, 4},
-        {0, 0, 0},
-        {1, 1, 1}
+    newModel = g3d.newModel( -- example model
+        assets.models.cube, -- reference to model asset
+        assets.textures.blank, -- reference to texture asset
+        {5, -5, 4}, -- model translation 
+        {0, 0, 0}, -- model rotation
+        {1, 1, 1} -- model scaling
     )
 
     love.graphics.setBackgroundColor(0.25,0.5,1)
@@ -40,23 +37,17 @@ function MainScene:enter()
     map = g3d.newModel(assets.models.map, assets.textures.maptiles, nil, nil, {-1,-1,1})
     background = g3d.newModel(assets.models.sphere, assets.textures.background, {0,0,0}, nil, {500,500,500})
     player = Player:new(0,0,0)
-    
-
-    canvas = {love.graphics.newCanvas(1280,720), depth=true}
-    
 
     modelManager:add(newModel)
     modelManager:add(background)
     modelManager:add(map)
     
-    local collideables =  {
+    local collideables =  { -- little hack but good for collision reasons!
         newModel,
         map
     }
-    
 
     player:setCollisionModels(collideables)
-    love.audio.play(assets.music.testbg)
 end
 
 function MainScene:update(dt)
@@ -90,16 +81,13 @@ end
 
 function MainScene:draw()
 
-    --love.graphics.setCanvas(canvas)
-    --love.graphics.clear(0,0,0,0)
-
-    modelManager:draw()
+    modelManager:draw() -- draws the models inside the modelmanagers list
 
     
     love.graphics.setBackgroundColor(0.1, 0.1, 0.1)
     love.graphics.setColor(1, 1, 1)
 
-    -- Display FPS
+    -- Debug info
     love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
     love.graphics.print("Graphics Driver: " .. love.graphics.getRendererInfo(), 10, 30)
     love.graphics.print("--------------", 10, 50)
@@ -107,13 +95,7 @@ function MainScene:draw()
     love.graphics.print("PlayerY: " .. tostring(-utils:round(player.position[2])), 10, 90)
     love.graphics.print("PlayerZ: " .. tostring(-utils:round(player.position[3])), 10, 110)
     love.graphics.print("--------------", 10, 130)
-    love.graphics.print("CurrentSong: " .. CurrentSong, 10, 150)
 
-
-    --love.graphics.setCanvas()
-    --love.graphics.draw(canvas[1], 1280/2, 720/2, 0, 1,-1, 1280/2, 720/2)
-
-    
 end
 
 
@@ -123,15 +105,7 @@ end
 
 function MainScene:keypressed(key)
     if key == 'escape' then
-        -- Switch to a different screen (e.g., 'gameplay')
         love.event.push('quit')
-    elseif key == '1' then
-        love.audio.stopAll()
-        love.audio.play(assets.music.testbg)
-        CurrentSong = "testbg"
-    elseif key == 'm' then
-        love.audio.stopAll()
-        CurrentSong = "none"
     elseif key == 'c' then
         g3d.camera.capturingMouse = not g3d.camera.capturingMouse
     end
